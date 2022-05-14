@@ -13,53 +13,35 @@ namespace AssignmentIndigoLabs.Controllers
         private readonly List<string> regionList = new(){ "LJ", "CE", "KR", "NM", "KK", "KP", "MB", "MS", "NG", "PO", "SG", "ZA" };
         public CovidData covidData = new();
 
-        private static bool CheckDay(int day) { return day<=31&&day>=1; }
-        private static bool CheckMonth(int month) { return month<=12&&month>=1; } 
-        private static bool CheckYear(int year) { return year<=2022&&year>=2020; }
-        private static bool CheckDate(int date) 
+        private static DateOnly ConvertToDateOnly(int date) 
         {
-            if (date == 0)
-                return true;
-            string currentDate = date.ToString();
-            if ((currentDate.Length == 8 && CheckDay(int.Parse(""+ currentDate[6]+ currentDate[7])) && 
-                CheckMonth(int.Parse(""+ currentDate[4]+ currentDate[5])) && CheckYear(int.Parse(""+ currentDate[0]+ currentDate[1]+ currentDate[2]+ currentDate[3]))) 
-                )
+            DateOnly parsedDate;
+            if (date != 0)
             {
-                return true;
+                try
+                {
+                    parsedDate = DateOnly.ParseExact(date.ToString(), "yyyyMMdd");
+                }
+                catch
+                {
+                    throw new Exception("Wrong date parameter");
+                }
             }
-            return false;
+            return parsedDate;
         }
-        private static bool CompareDates(int date1, string date2)
+        private static bool CompareDates(DateOnly firstDate, DateOnly secondDate)
         {
-            var firstDate = DateOnly.ParseExact(date1.ToString(), "yyyyMMdd");
-            var secondDate = DateOnly.Parse(date2);
-            if (firstDate >= secondDate)
-                return true;
-            return false;
-        }
-        private static bool CompareDates(string date1, int date2)
-        {
-            var firstDate = DateOnly.Parse(date1);
-            var secondDate = DateOnly.ParseExact(date2.ToString(), "yyyyMMdd");
-            if (firstDate >= secondDate)
-                return true;
-            return false;
-        }
-        private static bool CompareDates(int date1, int date2)
-        {
-            if (date1 == 0 || date2 == 0)
-                return true;
-            var firstDate = DateOnly.ParseExact(date1.ToString(), "yyyyMMdd");
-            var secondDate = DateOnly.ParseExact(date2.ToString(), "yyyyMMdd");
             if (firstDate >= secondDate)
                 return true;
             return false;
         }
         private bool CheckValues(string? Region, int From, int To)
         {
-            if ((Region == null || regionList.Contains(Region.ToUpper())) && CheckDate(From) && CheckDate(To) && CompareDates(To, From))
-                return true;
-            return false;
+            if (From != 0 && To != 0 && To < From)
+                return false;
+            if (Region != null && !regionList.Contains(Region.ToUpper()))
+                return false;
+            return true;
         }
 
         private static void CheckApiAuthentication(IHeaderDictionary? header) 
@@ -68,7 +50,7 @@ namespace AssignmentIndigoLabs.Controllers
                 throw new Exception("API Authentication failed");
         }
 
-        private static string FindFirstDay(List<string> week, Dictionary<string, Dictionary<string, int>> lastWeekData)
+        private static DateOnly FindFirstDay(List<DateOnly> week, Dictionary<DateOnly, Dictionary<string, int>> lastWeekData)
         {
             foreach (var day in week)
             {
@@ -77,7 +59,7 @@ namespace AssignmentIndigoLabs.Controllers
             }
             throw new Exception("Missing data for the past week");
         }
-        private static string FindLastDay(List<string> week, Dictionary<string, Dictionary<string, int>> lastWeekData)
+        private static DateOnly FindLastDay(List<DateOnly> week, Dictionary<DateOnly, Dictionary<string, int>> lastWeekData)
         {
             week.Reverse();
             foreach (var day in week)
@@ -87,24 +69,24 @@ namespace AssignmentIndigoLabs.Controllers
             }
             throw new Exception("Missing data for the past week");
         }
-        private static List<string> GetLastWeekDates() 
+        private static List<DateOnly> GetLastWeekDates() 
         {
-            List<string> week = new();
+            List<DateOnly> week = new();
             DateTime today = DateTime.Today;
             DateTime startingDay = DateTime.Today;
             startingDay = startingDay.AddDays(-1);
-            week.Add(startingDay.ToString("yyyy-MM-dd"));
+            week.Add(DateOnly.FromDateTime(startingDay));
 
             while (startingDay.DayOfWeek != today.DayOfWeek)
             {
                 startingDay = startingDay.AddDays(-1);
-                week.Add(startingDay.ToString("yyyy-MM-dd"));
+                week.Add(DateOnly.FromDateTime(startingDay));
             }
             return week;
         }
-        private static Dictionary<string, Dictionary<string, int>> GetLastWeekData(Dictionary<string, Dictionary<string, int>> allData) 
+        private static Dictionary<DateOnly, Dictionary<string, int>> GetLastWeekData(Dictionary<DateOnly, Dictionary<string, int>> allData) 
         {
-            Dictionary<string, Dictionary<string, int>> data = new();
+            Dictionary<DateOnly, Dictionary<string, int>> data = new();
             var week = GetLastWeekDates();
             foreach(var day in week) 
             {
@@ -114,7 +96,7 @@ namespace AssignmentIndigoLabs.Controllers
 
             return data;
         }
-        private List<LastWeekResults> FormatLastWeekData(Dictionary<string, Dictionary<string, int>>  lastWeekData) 
+        private List<LastWeekResults> FormatLastWeekData(Dictionary<DateOnly, Dictionary<string, int>>  lastWeekData) 
         {
             List<LastWeekResults> lastWeekResultsList = new();
             var week = GetLastWeekDates();
@@ -132,20 +114,21 @@ namespace AssignmentIndigoLabs.Controllers
             return lastWeekResultsList.OrderByDescending(t => t.AvgCases).ToList();
         }
 
-        private List<CasesResults> GetCaseResultData(int From, int To) 
+        private List<CasesResults> GetCaseResultData(DateOnly From, DateOnly To) 
         {
+            DateOnly checkUp;
             if (covidData?.allData != null)
             {
                 List<CasesResults> casesResultsList = new();
                 foreach (var key in covidData.allData.Keys)
                 {
-                    if (From != 0 && !CompareDates(key, From))
+                    if (!From.Equals(checkUp) && !CompareDates(key, From))
                         continue;
-                    else if (To != 0 && !CompareDates(To, key))
+                    else if (!To.Equals(checkUp) && !CompareDates(To, key))
                         continue;
                     foreach (var region in regionList)
                     {
-                        CasesResults caseResult = new(key, region, covidData.allData[key]["region." + region.ToLower() + ".cases.active"], covidData.allData[key]["region." + region.ToLower() + ".vaccinated.1st.todate"],
+                        CasesResults caseResult = new(key.ToString("yyyy-MM-dd"), region, covidData.allData[key]["region." + region.ToLower() + ".cases.active"], covidData.allData[key]["region." + region.ToLower() + ".vaccinated.1st.todate"],
                              covidData.allData[key]["region." + region.ToLower() + ".vaccinated.2nd.todate"], covidData.allData[key]["region." + region.ToLower() + ".deceased.todate"]);
                         casesResultsList.Add(caseResult);
                     }
@@ -156,18 +139,19 @@ namespace AssignmentIndigoLabs.Controllers
             else
                 throw new Exception("Missing Covid data");
         }
-        private List<CasesResults> GetCaseResultData(string Region, int From, int To)
+        private List<CasesResults> GetCaseResultData(string Region, DateOnly From, DateOnly To)
         {
             if (covidData?.allData != null)
             {
+                DateOnly checkUp;
                 List<CasesResults> casesResultsList = new();
                 foreach (var key in covidData.allData.Keys)
                 {
-                    if (From != 0 && !CompareDates(key, From))
+                    if (!From.Equals(checkUp) && !CompareDates(key, From))
                         continue;
-                    else if (To != 0 && !CompareDates(To, key))
+                    else if (!To.Equals(checkUp) && !CompareDates(To, key))
                         continue;
-                    CasesResults caseResult = new(key, Region, covidData.allData[key]["region." + Region.ToLower() + ".cases.active"], covidData.allData[key]["region." + Region.ToLower() + ".vaccinated.1st.todate"],
+                    CasesResults caseResult = new(key.ToString("yyyy-MM-dd"), Region, covidData.allData[key]["region." + Region.ToLower() + ".cases.active"], covidData.allData[key]["region." + Region.ToLower() + ".vaccinated.1st.todate"],
                              covidData.allData[key]["region." + Region.ToLower() + ".vaccinated.2nd.todate"], covidData.allData[key]["region." + Region.ToLower() + ".deceased.todate"]);
                     casesResultsList.Add(caseResult);
                 }
@@ -177,7 +161,7 @@ namespace AssignmentIndigoLabs.Controllers
             else
                 throw new Exception("Missing Covid data");
         }
-        private List<CasesResults> FormatCasesResults(string? Region, int From, int To) 
+        private List<CasesResults> FormatCasesResults(string? Region, DateOnly From, DateOnly To) 
         {
             if (covidData?.allData != null) 
             {
@@ -203,23 +187,25 @@ namespace AssignmentIndigoLabs.Controllers
             var request = Request;
             var headers = request.Headers;
             CheckApiAuthentication(headers);
-
-            if (covidData.allData == null)
-                Task.Run(() => covidData.FillDataAsync()).Wait();
-            if (covidData?.allData != null)
+            if (CheckValues(Region, From, To))
             {
-                if (CheckValues(Region, From, To))
+
+                if (covidData.allData == null)
+                    Task.Run(() => covidData.FillDataAsync()).Wait();
+                if (covidData?.allData != null)
                 {
-                    List<CasesResults> results = FormatCasesResults(Region, From, To);
+                    DateOnly fromDate = ConvertToDateOnly(From);
+                    DateOnly toDate = ConvertToDateOnly(To);
+
+                    List<CasesResults> results = FormatCasesResults(Region, fromDate, toDate);
                     return results;
+
                 }
                 else
-                {
-                    throw new Exception("Wrong parameters");
-                }
+                    throw new Exception("Missing Covid data");
             }
             else
-                throw new Exception("Missing Covid data");
+                throw new Exception("Wrong date or region parameter");
         }
 
         [HttpGet("lastweek")]

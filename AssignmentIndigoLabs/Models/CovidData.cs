@@ -4,7 +4,7 @@ namespace AssignmentIndigoLabs.Models
 {
     public class CovidData
     {
-        public Dictionary<string, Dictionary<string, int>>? allData;
+        public Dictionary<DateOnly, Dictionary<string, int>>? allData;
 
         private async Task GetCSVAsync(string url)
         {
@@ -17,7 +17,7 @@ namespace AssignmentIndigoLabs.Models
             if (headers != null)
             {
                 var header = headers.Split(",");
-                Dictionary<string, Dictionary<string, int>> data = new();
+                Dictionary<DateOnly, Dictionary<string, int>> data = new();
 
                 while (!sr.EndOfStream)
                 {
@@ -33,7 +33,7 @@ namespace AssignmentIndigoLabs.Models
                             else
                                 subData.Add(header[i], int.Parse(result[i]));
                         }
-                        data.Add(result[0], subData);
+                        data.Add(DateOnly.ParseExact(result[0].Replace("-", ""), "yyyyMMdd"), subData);
                     }
                 }
                 sr.Close();
