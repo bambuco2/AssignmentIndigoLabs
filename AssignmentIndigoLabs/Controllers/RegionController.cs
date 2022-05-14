@@ -29,6 +29,38 @@ namespace AssignmentIndigoLabs.Controllers
             }
             return false;
         }
+        private static bool CompareDates(int date1, string date2)
+        {
+            var firstDate = DateOnly.ParseExact(date1.ToString(), "yyyyMMdd");
+            var secondDate = DateOnly.Parse(date2);
+            if (firstDate >= secondDate)
+                return true;
+            return false;
+        }
+        private static bool CompareDates(string date1, int date2)
+        {
+            var firstDate = DateOnly.Parse(date1);
+            var secondDate = DateOnly.ParseExact(date2.ToString(), "yyyyMMdd");
+            if (firstDate >= secondDate)
+                return true;
+            return false;
+        }
+        private static bool CompareDates(int date1, int date2)
+        {
+            if (date1 == 0 || date2 == 0)
+                return true;
+            var firstDate = DateOnly.ParseExact(date1.ToString(), "yyyyMMdd");
+            var secondDate = DateOnly.ParseExact(date2.ToString(), "yyyyMMdd");
+            if (firstDate >= secondDate)
+                return true;
+            return false;
+        }
+        private bool CheckValues(string? Region, int From, int To)
+        {
+            if ((Region == null || regionList.Contains(Region.ToUpper())) && CheckDate(From) && CheckDate(To) && CompareDates(To, From))
+                return true;
+            return false;
+        }
 
         private static void CheckApiAuthentication(IHeaderDictionary? header) 
         {
@@ -36,13 +68,25 @@ namespace AssignmentIndigoLabs.Controllers
                 throw new Exception("API Authentication failed");
         }
 
-        private bool CheckValues(string? Region, int From, int To) 
+        private static string FindFirstDay(List<string> week, Dictionary<string, Dictionary<string, int>> lastWeekData)
         {
-            if((Region == null || regionList.Contains(Region.ToUpper())) && CheckDate(From) && CheckDate(To) && CompareDates(To, From))
-                return true;
-            return false;
+            foreach (var day in week)
+            {
+                if (lastWeekData.ContainsKey(day))
+                    return day;
+            }
+            throw new Exception("Missing data for the past week");
         }
-
+        private static string FindLastDay(List<string> week, Dictionary<string, Dictionary<string, int>> lastWeekData)
+        {
+            week.Reverse();
+            foreach (var day in week)
+            {
+                if (lastWeekData.ContainsKey(day))
+                    return day;
+            }
+            throw new Exception("Missing data for the past week");
+        }
         private static List<string> GetLastWeekDates() 
         {
             List<string> week = new();
@@ -58,7 +102,6 @@ namespace AssignmentIndigoLabs.Controllers
             }
             return week;
         }
-
         private static Dictionary<string, Dictionary<string, int>> GetLastWeekData(Dictionary<string, Dictionary<string, int>> allData) 
         {
             Dictionary<string, Dictionary<string, int>> data = new();
@@ -70,26 +113,6 @@ namespace AssignmentIndigoLabs.Controllers
             }
 
             return data;
-        }
-
-        private static string FindFirstDay(List<string> week, Dictionary<string, Dictionary<string, int>> lastWeekData) 
-        {
-            foreach(var day in week) 
-            {
-                if(lastWeekData.ContainsKey(day))
-                    return day;
-            }
-            throw new Exception("Missing data for the past week");
-        }
-        private static string FindLastDay(List<string> week, Dictionary<string, Dictionary<string, int>> lastWeekData) 
-        {
-            week.Reverse();
-            foreach (var day in week)
-            {
-                if (lastWeekData.ContainsKey(day))
-                    return day;
-            }
-            throw new Exception("Missing data for the past week");
         }
         private List<LastWeekResults> FormatLastWeekData(Dictionary<string, Dictionary<string, int>>  lastWeekData) 
         {
@@ -107,33 +130,6 @@ namespace AssignmentIndigoLabs.Controllers
                 lastWeekResultsList.Add(today);
             }
             return lastWeekResultsList.OrderByDescending(t => t.AvgCases).ToList();
-        }
-
-        private static bool CompareDates(int date1, string date2) 
-        {
-            var firstDate = DateOnly.ParseExact(date1.ToString(), "yyyyMMdd");
-            var secondDate = DateOnly.Parse(date2);
-            if(firstDate >= secondDate) 
-                return true;
-            return false;
-        }
-        private static bool CompareDates(string date1, int date2) 
-        {
-            var firstDate = DateOnly.Parse(date1);
-            var secondDate = DateOnly.ParseExact(date2.ToString(), "yyyyMMdd");
-            if (firstDate >= secondDate)
-                return true;
-            return false;
-        }
-        private static bool CompareDates(int date1, int date2) 
-        {
-            if (date1 == 0 || date2 == 0)
-                return true;
-            var firstDate = DateOnly.ParseExact(date1.ToString(), "yyyyMMdd");
-            var secondDate = DateOnly.ParseExact(date2.ToString(), "yyyyMMdd");
-            if (firstDate >= secondDate)
-                return true;
-            return false;
         }
 
         private List<CasesResults> GetCaseResultData(int From, int To) 
@@ -181,7 +177,6 @@ namespace AssignmentIndigoLabs.Controllers
             else
                 throw new Exception("Missing Covid data");
         }
-
         private List<CasesResults> FormatCasesResults(string? Region, int From, int To) 
         {
             if (covidData?.allData != null) 
