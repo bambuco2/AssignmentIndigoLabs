@@ -10,7 +10,7 @@ namespace AssignmentIndigoLabs.Controllers
     public class RegionController : ControllerBase
     {
         private readonly List<string> _regionList = new(){ "LJ", "CE", "KR", "NM", "KK", "KP", "MB", "MS", "NG", "PO", "SG", "ZA" };
-        public CovidData CovidData = new();
+        public CovidData _covidData = new();
 
         private DateOnly ConvertToDateOnly(int date) 
         {
@@ -116,10 +116,10 @@ namespace AssignmentIndigoLabs.Controllers
         private List<CasesResults> GetCaseResultData(DateOnly from, DateOnly to) 
         {
             DateOnly checkUp;
-            if (CovidData?.AllData != null)
+            if (_covidData?.AllData != null)
             {
                 List<CasesResults> casesResultsList = new();
-                foreach (var key in CovidData.AllData.Keys)
+                foreach (var key in _covidData.AllData.Keys)
                 {
                     if (!from.Equals(checkUp) && !CompareDates(key, from))
                         continue;
@@ -127,8 +127,8 @@ namespace AssignmentIndigoLabs.Controllers
                         continue;
                     foreach (var region in _regionList)
                     {
-                        CasesResults caseResult = new(key.ToString("yyyy-MM-dd"), region, CovidData.AllData[key]["region." + region.ToLower() + ".cases.active"], CovidData.AllData[key]["region." + region.ToLower() + ".vaccinated.1st.todate"],
-                             CovidData.AllData[key]["region." + region.ToLower() + ".vaccinated.2nd.todate"], CovidData.AllData[key]["region." + region.ToLower() + ".deceased.todate"]);
+                        CasesResults caseResult = new(key.ToString("yyyy-MM-dd"), region, _covidData.AllData[key]["region." + region.ToLower() + ".cases.active"], _covidData.AllData[key]["region." + region.ToLower() + ".vaccinated.1st.todate"],
+                             _covidData.AllData[key]["region." + region.ToLower() + ".vaccinated.2nd.todate"], _covidData.AllData[key]["region." + region.ToLower() + ".deceased.todate"]);
                         casesResultsList.Add(caseResult);
                     }
                 }
@@ -140,18 +140,18 @@ namespace AssignmentIndigoLabs.Controllers
         }
         private List<CasesResults> GetCaseResultData(string region, DateOnly from, DateOnly to)
         {
-            if (CovidData?.AllData != null)
+            if (_covidData?.AllData != null)
             {
                 DateOnly checkUp;
                 List<CasesResults> casesResultsList = new();
-                foreach (var key in CovidData.AllData.Keys)
+                foreach (var key in _covidData.AllData.Keys)
                 {
                     if (!from.Equals(checkUp) && !CompareDates(key, from))
                         continue;
                     else if (!to.Equals(checkUp) && !CompareDates(to, key))
                         continue;
-                    CasesResults caseResult = new(key.ToString("yyyy-MM-dd"), region, CovidData.AllData[key]["region." + region.ToLower() + ".cases.active"], CovidData.AllData[key]["region." + region.ToLower() + ".vaccinated.1st.todate"],
-                             CovidData.AllData[key]["region." + region.ToLower() + ".vaccinated.2nd.todate"], CovidData.AllData[key]["region." + region.ToLower() + ".deceased.todate"]);
+                    CasesResults caseResult = new(key.ToString("yyyy-MM-dd"), region, _covidData.AllData[key]["region." + region.ToLower() + ".cases.active"], _covidData.AllData[key]["region." + region.ToLower() + ".vaccinated.1st.todate"],
+                             _covidData.AllData[key]["region." + region.ToLower() + ".vaccinated.2nd.todate"], _covidData.AllData[key]["region." + region.ToLower() + ".deceased.todate"]);
                     casesResultsList.Add(caseResult);
                 }
 
@@ -162,7 +162,7 @@ namespace AssignmentIndigoLabs.Controllers
         }
         private List<CasesResults> FormatCasesResults(string? region, DateOnly from, DateOnly to) 
         {
-            if (CovidData?.AllData != null) 
+            if (_covidData?.AllData != null) 
             {
                 List<CasesResults> casesResultsList;
                 if (region == null)
@@ -189,9 +189,9 @@ namespace AssignmentIndigoLabs.Controllers
             if (CheckValues(region, from, to))
             {
 
-                if (CovidData.AllData == null)
-                    Task.Run(() => CovidData.FillDataAsync()).Wait();
-                if (CovidData?.AllData != null)
+                if (_covidData.AllData == null)
+                    Task.Run(() => _covidData.FillDataAsync()).Wait();
+                if (_covidData?.AllData != null)
                 {
                     DateOnly fromDate = ConvertToDateOnly(from);
                     DateOnly toDate = ConvertToDateOnly(to);
@@ -214,11 +214,11 @@ namespace AssignmentIndigoLabs.Controllers
             var headers = request.Headers;
             CheckApiAuthentication(headers);
 
-            if (CovidData.AllData == null)
-                Task.Run(() => CovidData.FillDataAsync()).Wait();
-            if (CovidData.AllData != null)
+            if (_covidData.AllData == null)
+                Task.Run(() => _covidData.FillDataAsync()).Wait();
+            if (_covidData.AllData != null)
             {
-                var lastWeekData = GetLastWeekData(CovidData.AllData);
+                var lastWeekData = GetLastWeekData(_covidData.AllData);
                 var formatedWeekResults = FormatLastWeekData(lastWeekData);
                 return formatedWeekResults;
             }
