@@ -1,4 +1,4 @@
-﻿namespace AssignmentIndigoLabs.Classes
+﻿namespace AssignmentIndigoLabs.Models
 {
     public class CasesResults
     {

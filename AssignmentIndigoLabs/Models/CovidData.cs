@@ -4,7 +4,7 @@ namespace AssignmentIndigoLabs.Models
 {
     public class CovidData
     {
-        public Dictionary<DateOnly, Dictionary<string, int>>? allData;
+        public Dictionary<DateOnly, Dictionary<string, int>>? AllData;
 
         private async Task GetCSVAsync(string url)
         {
@@ -38,14 +38,14 @@ namespace AssignmentIndigoLabs.Models
                 }
                 sr.Close();
 
-                allData = data;
+                AllData = data;
             }
             else
                 throw new Exception("URL to covid data not working or corrupted data");
         }
         public async Task FillDataAsync() 
         {
-            allData = new();
+            AllData = new();
             await GetCSVAsync("https://raw.githubusercontent.com/sledilnik/data/master/csv/region-cases.csv");
         }
     }
