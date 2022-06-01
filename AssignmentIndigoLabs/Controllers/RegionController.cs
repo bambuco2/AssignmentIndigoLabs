@@ -43,10 +43,11 @@ namespace AssignmentIndigoLabs.Controllers
             return true;
         }
 
-        private void CheckApiAuthentication(IHeaderDictionary? header) 
+        private Boolean CheckApiAuthentication(IHeaderDictionary? header) 
         {
             if (header == null || !header.ContainsKey("AuthenticationPassword") || !header["AuthenticationPassword"].Equals("IndigoLabs"))
-                throw new Exception("API Authentication failed");
+                return false;
+            return true;
         }
 
         private DateOnly FindFirstDay(List<DateOnly> week, Dictionary<DateOnly, Dictionary<string, int>> lastWeekData)
@@ -181,11 +182,12 @@ namespace AssignmentIndigoLabs.Controllers
 
 
         [HttpGet("cases")]
-        public List<CasesResults> Get(string? region, int from, int to)
+        public ActionResult<List<CasesResults>> Get(string? region, int from, int to)
         {
             var request = Request;
             var headers = request.Headers;
-            CheckApiAuthentication(headers);
+            if (!CheckApiAuthentication(headers))
+                return Unauthorized();
             if (CheckValues(region, from, to))
             {
 
@@ -201,18 +203,19 @@ namespace AssignmentIndigoLabs.Controllers
 
                 }
                 else
-                    throw new Exception("Missing Covid data");
+                    return StatusCode(500);
             }
             else
-                throw new Exception("Wrong date or region parameter");
+                return BadRequest();
         }
 
         [HttpGet("lastweek")]
-        public List<LastWeekResults> GetLastWeek()
+        public ActionResult<List<LastWeekResults>> GetLastWeek()
         {
             var request = Request;
             var headers = request.Headers;
-            CheckApiAuthentication(headers);
+            if (!CheckApiAuthentication(headers))
+                return Unauthorized();
 
             if (_covidData.AllData == null)
                 Task.Run(() => _covidData.FillDataAsync()).Wait();
@@ -223,8 +226,10 @@ namespace AssignmentIndigoLabs.Controllers
                 return formatedWeekResults;
             }
             else
-                throw new Exception("Missing Covid data");
+                return StatusCode(500);
 
         }
+
+        
     }
 }
